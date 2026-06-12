@@ -8,6 +8,28 @@ import java.util.Map;
 import static com.sourav.mantra.TokenType.*;
 
 public class Scanner {
+    private static final Map<String, TokenType> keywords;
+
+    static {
+        keywords = new HashMap<>();
+        keywords.put("and", AND);
+        keywords.put("class", CLASS);
+        keywords.put("else", ELSE);
+        keywords.put("false", FALSE);
+        keywords.put("for", FOR);
+        keywords.put("fun", FUN);
+        keywords.put("if", IF);
+        keywords.put("nil", NIL);
+        keywords.put("or", OR);
+        keywords.put("print", PRINT);
+        keywords.put("return", RETURN);
+        keywords.put("super", SUPER);
+        keywords.put("this", THIS);
+        keywords.put("true", TRUE);
+        keywords.put("var", VAR);
+        keywords.put("while", WHILE);
+    }
+
     private final String source;
     private final List<Token> tokens = new ArrayList<>();
     private int start = 0;
@@ -81,9 +103,50 @@ public class Scanner {
             case '"': string(); break;
 
             default:
-                Mantra.error(line, "Unexpected character.");
+                if (isDigit(c)) {
+                    number();
+                } else if (isAlpha(c)) {
+                    identifier();
+                } else {
+                    Mantra.error(line, "Unexpected character.");
+                }
                 break;
         }
+    }
+
+    // Scans an identifier or keyword and adds the appropriate token.
+    private void identifier() {
+        while (isAlphaNumeric(peek())) advance(); //  // Consume all letters, digits, and underscores that form the identifier.
+
+        String text = source.substring(start, current);
+
+        // Check if the lexeme matches a reserved keyword.
+        // If found, use the corresponding keyword token type.
+        TokenType type = keywords.get(text);
+
+        // Otherwise, treat it as a user-defined identifier.
+        if (type == null) type = IDENTIFIER;
+
+        // Add the token to the token list.
+        addToken(type);
+    }
+
+    // Scans a numeric literal (integer or floating-point number)
+    // and adds it as a NUMBER token.
+    private void number() {
+        while(isDigit(peek())) advance();  // Consume all consecutive digits of the integer part.
+
+        // Look for a decimal part.
+        // Check for a decimal point followed by at least one digit.
+        // This ensures that "123.45" is parsed as a single number token.
+        if(peek() == '.' && isDigit(peekNext())) {
+            advance(); // Consume the '.'
+
+            while(isDigit(peek())) advance();
+        }
+
+        // Convert the lexeme into a Double and store it as the token's literal value.
+        addToken(NUMBER, Double.parseDouble(source.substring(start, current)));
     }
 
     // Consumes the current character and moves the scanner forward.
@@ -122,6 +185,25 @@ public class Scanner {
     private char peek() {
         if(isAtEnd()) return '\0';
         return source.charAt(current);
+    }
+
+    private char peekNext() {  // Peelk the next character
+        if (current + 1 >=  source.length()) return '\0';
+        return source.charAt(current + 1);
+    }
+
+    private boolean isAlpha(char c) {
+        return (c >= 'a' && c <= 'z') ||
+               (c >= 'A' && c <= 'Z') ||
+                c == '_';
+    }
+
+    private boolean isAlphaNumeric(char c) {
+        return isAlpha(c) || isDigit(c);
+    }
+
+    private boolean isDigit(char c) {  // Check if the character is a digit
+        return c >= '0' && c <= '9';
     }
 
     private void string() {
