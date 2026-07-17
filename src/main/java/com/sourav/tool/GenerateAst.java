@@ -49,6 +49,8 @@ public class GenerateAst {
         // Begin the abstract base AST class.
         writer.println("abstract class " + baseName + " {");
 
+        defineVisitor(writer, baseName, types);
+
         // Generate each AST subclass.
         for (String type : types) {
             String className = type.split(":")[0].trim();
@@ -56,9 +58,24 @@ public class GenerateAst {
             defineType(writer, baseName, className, fields);
         }
 
+        // Base accept() method
+        writer.println();
+
+        writer.println(" abstract <R> R accept(Visitor<R> visitor);");
+
         // Close the base class definition.
         writer.println("}");
         writer.close();
+    }
+
+    // Generate the visitor interface
+    private static void defineVisitor(PrintWriter writer, String baseName, List<String> types) throws IOException {
+        writer.println(" interface Visitor<R> {");
+        for (String type : types) {
+            String typeName = type.split(":")[0].trim();
+            writer.println(" R visit" + typeName + baseName + "(" + typeName + " " + baseName.toLowerCase() + ");");
+        }
+        writer.println(" }");
     }
 
     // Generates a single AST node subclass.
@@ -81,6 +98,13 @@ public class GenerateAst {
 
         // End constructor.
         writer.println("}");
+
+        // Visitor pattern
+        writer.println();
+        writer.println(" @Override");
+        writer.println(" <R> R accept(Visitor<R> visitor) {");
+        writer.println(" return visitor.visit" + className + baseName + "(this);");
+        writer.println(" }");
 
         // Generate field declarations.
         writer.println();
